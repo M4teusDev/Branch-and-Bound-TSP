@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 
     typedef struct cidade
@@ -27,6 +28,8 @@ int main ( void )
 
     float m[n][n];
     monta_matriz(p_cidade, n, n, m);
+
+    
 }
 
 
@@ -96,7 +99,6 @@ void  monta_matriz(cidade *p, int lin, int col, float m[lin][col])
     int i = 0, j = 0;
 
     for(i = 0; i < lin; i++)
-    {
-         printf("%f\n", (p + i)->cod);    
-    }
+        for(j = 0; j < col; j++)
+            m[i][j] = sqrt(pow( ((p + i)->cord_x - (p + j)->cord_x), 2) + pow(((p + i)->cord_y - (p + j)->cord_y), 2));
 }
