@@ -10,6 +10,12 @@ typedef struct cidade
 }cidade;
 
 
+typedef struct caminho
+{
+    int cod;
+    float distancia;
+}trajeto;
+
 //Receber dados
 int    recebe_dados(char *path, cidade **p_dados);
 int    tamanho_arquivo(char *path, char *line, FILE *p);
@@ -17,12 +23,18 @@ int    tamanho_cabecalho( char *line, FILE *p);
 void   aloca(cidade **p, int tam);
 
 //Monta matriz
-void   monta_matriz(cidade *p, int lin, int col, float m[lin][col]);
-float   minimiza_matriz(int lin, int col, float m[lin][col]);
+float  monta_matriz(cidade *p, int lin, int col, float m[lin][col]);
+float  minimiza_matriz(int lin, int col, float m[lin][col]);
 float  menor_valor_linha(int lin, int col, float m[lin][col]);
 float  menor_valor_coluna(int lin, int col, int aux, float m[lin][col]);
 
 void   exibe_matriz(int lin, int col, float m[lin][col]);
+
+//Branch and bound 
+void  branch_and_bound(int lin, int col, float m[lin][col], float valor_minimo);
+void  copia_matriz(int lin, int col, float m[lin][col], float m_aux[lin][col]);
+float traca_caminho(int inicio_de_partida, int prox_parada, int lin, int col, float m[lin][col]);
+void  zera_coluna_linha_e_encontro(int inicio_de_partida, int prox_parada,int lin, int col, float m[lin][col]);
 
 int main ( void )
 {
@@ -34,7 +46,9 @@ int main ( void )
     int n = recebe_dados(file, &p_cidade);
 
     float m[n][n];
-    monta_matriz(p_cidade, n, n, m);
+    float min = monta_matriz(p_cidade, n, n, m);
+
+    branch_and_bound(n,n,m,min);
 }
 
 
@@ -99,7 +113,7 @@ void  aloca(cidade **p, int tam){
     }
 }
 
-void  monta_matriz(cidade *p, int lin, int col, float m[lin][col])
+float  monta_matriz(cidade *p, int lin, int col, float m[lin][col])
 {
     int i = 0, j = 0;
     float min;
@@ -109,11 +123,11 @@ void  monta_matriz(cidade *p, int lin, int col, float m[lin][col])
             m[i][j] = sqrt(pow( ((p + i)->cord_x - (p + j)->cord_x), 2) + pow(((p + i)->cord_y - (p + j)->cord_y), 2));
     
     min = minimiza_matriz(lin, col, m);
-
     printf("Primeira solucao factivel %.2f\n\n",min);
+    return min;
 }
 
-float  minimiza_matriz(int lin, int col, float m[lin][col])
+float minimiza_matriz(int lin, int col, float m[lin][col])
 {
     int i = 0, j = 0;
     float min = 0, sum_min = 0.0;
@@ -182,4 +196,50 @@ void  exibe_matriz(int lin, int col, float m[lin][col])
         }
         printf("\n");
     } 
+}
+
+void  branch_and_bound(int lin, int col, float m[lin][col], float valor_minimo)
+{
+    float m_aux[lin][col], min_parcial = 0.0, resultado_parcial = 0.0;
+    int i = 0, inicio_de_partida = 0;
+
+    copia_matriz(lin,col, m, m_aux);
+
+    
+    min_parcial = traca_caminho(inicio_de_partida, 1, lin, col, m_aux);
+    resultado_parcial = m[inicio_de_partida][1] + valor_minimo + min_parcial;
+
+    printf("%f + %f + %f = %f\n\n", m[inicio_de_partida][1] , valor_minimo , min_parcial, resultado_parcial );
+
+
+}
+
+void  copia_matriz(int lin, int col, float m[lin][col], float m_aux[lin][col])
+{
+    int i = 0, j = 0;
+    
+    for(i = 0; i < lin; i++)
+        for(j = 0; j < col; j++)
+            m_aux[i][j] = m[i][j];
+}
+
+float traca_caminho(int inicio_de_partida, int prox_parada, int lin, int col, float m[lin][col])
+{
+    zera_coluna_linha_e_encontro(inicio_de_partida, prox_parada,lin,col,m);
+    return  minimiza_matriz(lin,  col, m);
+
+}
+
+void  zera_coluna_linha_e_encontro(int inicio_de_partida, int prox_parada,int lin, int col, float m[lin][col])
+{
+    int i = 0, j = 0;
+    for(i = 0; i < lin; i++)
+    {
+        for(j = 0; j < col; j++)
+        {
+            if(i == inicio_de_partida) m[i][j] = 0.0;
+            if(j == prox_parada) m[i][j] = 0.0;
+            if(inicio_de_partida == j && prox_parada == i) m[i][j] = 0.0;
+        }
+    }
 }
