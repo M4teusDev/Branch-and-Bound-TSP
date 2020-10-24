@@ -34,6 +34,7 @@ void  branch_and_bound(int lin, int col, float m[lin][col], float valor_minimo);
 void  copia_matriz(int lin, int col, float m[lin][col], float m_aux[lin][col]);
 float traca_caminho(int inicio_de_partida, int prox_parada, int lin, int col, float m[lin][col]);
 void  zera_coluna_linha_e_encontro(int inicio_de_partida, int prox_parada,int lin, int col, float m[lin][col]);
+int   retorna_cidade(int lin, int col, float m[lin][col]);
 
 int main ()
 {
@@ -205,17 +206,39 @@ void  exibe_matriz(int lin, int col, float m[lin][col])
 void  branch_and_bound(int lin, int col, float m[lin][col], float valor_minimo)
 {
     float m_aux[lin][col], min_parcial = 0.0, resultado_parcial = 0.0;
-    int i = 0, inicio_de_partida = 0;
-
+    int i = 0, j = 0, inicio_de_partida = 0, profundidade = lin, tamanho = lin, cidade = -1, pos = 0, flag = 0, pos_aux = 0;
+    
     copia_matriz(lin,col, m, m_aux);
-    exibe_matriz(lin,col,m);
 
-    min_parcial = traca_caminho(inicio_de_partida, 1, lin, col, m_aux);
-    resultado_parcial = m[inicio_de_partida][1] + valor_minimo + min_parcial;
+    for(i = 0; i < profundidade; i++)
+    {
+        exibe_matriz(lin,col,m_aux);
+        printf("\n");
+        printf("Cidades nao visitadas: \t");
+        for(j = 1; j < tamanho - i; j++)
+        {
+            if(( cidade = retorna_cidade(lin,col,m_aux)) != -1)
+            {
+                if(flag == 0)
+                {
+                    resultado_parcial = m[inicio_de_partida][cidade] + valor_minimo + min_parcial;
+                    pos_aux = cidade;
+                    flag++;
+                }
+                else if( (min_parcial + valor_minimo +  m[inicio_de_partida][cidade]) < resultado_parcial)
+                {
+                    resultado_parcial = m[inicio_de_partida][cidade] + valor_minimo + min_parcial;
+                    pos_aux = cidade;
+                    flag++;
+                } 
+            }
+        }
 
-
-    exibe_matriz(lin,col,m_aux);
-    printf("%f + %f + %f = %f\n\n", m[inicio_de_partida][1] , valor_minimo , min_parcial, resultado_parcial );
+        min_parcial = traca_caminho(pos,pos_aux, lin, col, m_aux);
+        flag = 0;
+        printf("\n");
+            
+    }
 }
 
 void  copia_matriz(int lin, int col, float m[lin][col], float m_aux[lin][col])
@@ -246,4 +269,15 @@ void  zera_coluna_linha_e_encontro(int inicio_de_partida, int prox_parada,int li
             if(inicio_de_partida == j && prox_parada == i) m[i][j] = -1;
         }
     }
+}
+
+int   retorna_cidade(int lin, int col, float m[lin][col])
+{
+    int i = 0;
+
+    for(i = 0; i < lin; i++)
+        if(m[i][0] != -1)
+            return i;
+
+    return -1;
 }
