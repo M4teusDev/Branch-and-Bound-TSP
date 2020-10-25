@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <math.h>
 
@@ -30,15 +31,20 @@ float  menor_valor_coluna(int lin, int col, int aux, float m[lin][col]);
 void   exibe_matriz(int lin, int col, float m[lin][col]);
 
 //Branch and bound
-void  branch_and_bound(int lin, int col, float m[lin][col], float valor_minimo);
+void  branch_and_bound(int lin, int col, float m[lin][col], float valor_minimo, trajeto **p_trajeto);
 void  copia_matriz(int lin, int col, float m[lin][col], float m_aux[lin][col]);
 float traca_caminho(int inicio_de_partida, int prox_parada, int lin, int col, float m[lin][col]);
 void  zera_coluna_linha_e_encontro(int inicio_de_partida, int prox_parada,int lin, int col, float m[lin][col]);
-int   retorna_cidade(int lin, int col, float m[lin][col]);
+int   verifica_visita(bool *p, int tam);
+
+void  inicializa_vetor_cidades_visitadas(bool *p, int tam);  
+void  copia_caminho_ja_caminhado(bool *p, bool *q, int tam);
+void  aloca_trajeto(trajeto **p, int tam);
 
 int main ()
 {
-    cidade *p_cidade = NULL;
+    cidade  *p_cidade  = NULL;
+    trajeto *p_trajeto = NULL;
 
     char file[100] = "teste01.txt";
     int n = recebe_dados(file, &p_cidade);
@@ -46,8 +52,22 @@ int main ()
     float m[n][n];
     float min = monta_matriz(p_cidade, n, n, m);
 //Ok
+    float m_teste[5][5] = {-1,10,17,0,1,12,-1,11,2,0,0,3,-1,0,2,15,3,12,-1,0,11,0,0,12,-1};
+    branch_and_bound(5,5,m_teste,25, &p_trajeto);
 
-    branch_and_bound(n,n,m,min);
+    int i = 0;
+
+    printf("Trajeto: ");
+    for(i = 0; i < 5; i++)
+    {
+        printf("%i\t", (p_trajeto + i)->cod + 1);
+    }
+
+    printf("\nDistancoa: ");
+    for(i = 0; i < 5; i++)
+    {
+        printf("%f\t", (p_trajeto + i)->distancia);
+    }
 }
 
 
@@ -126,8 +146,6 @@ float  monta_matriz(cidade *p, int lin, int col, float m[lin][col])
         }
     }
  
-    exibe_matriz(lin,col,m);
-
     min = minimiza_matriz(lin, col, m);
     printf("Primeira solucao factivel %.2f\n\n",min);
     return min;
@@ -143,8 +161,7 @@ float minimiza_matriz(int lin, int col, float m[lin][col])
         for( j = 0; j < col; j++)
             if(i  != j && m[i][j] >= 0 ) m[i][j] -= min;
     }
-
-    printf("\n");
+    
     for( j = 0; j < col; j++){
         sum_min += (min = menor_valor_coluna(lin, col, j, m));
         for( i = 0; i < lin; i++)
@@ -203,22 +220,34 @@ void  exibe_matriz(int lin, int col, float m[lin][col])
     }
 }
 
-void  branch_and_bound(int lin, int col, float m[lin][col], float valor_minimo)
+void  branch_and_bound(int lin, int col, float m[lin][col], float valor_minimo, trajeto **p_trajeto)
 {
-    float m_aux[lin][col], min_parcial = 0.0, resultado_parcial = 0.0;
-    int i = 0, j = 0, inicio_de_partida = 0, profundidade = lin, tamanho = lin, cidade = -1, pos = 0, flag = 0, pos_aux = 0;
-    
-    copia_matriz(lin,col, m, m_aux);
+    float m_aux[lin][col], m_aux_aux[lin][col], min_parcial = 0.0, resultado_parcial = 0.0;
+    int i = 0, j = 0, inicio_de_partida = 0, profundidade = lin, tamanho = lin, cidade = 0, pos = 0, flag = 0, pos_aux = 0, y = 0, cont  = 0;
+    bool cidades_visitadas[lin], cidades_trajeto[lin];
 
-    for(i = 0; i < profundidade; i++)
+    inicializa_vetor_cidades_visitadas(cidades_visitadas, lin);
+    inicializa_vetor_cidades_visitadas(cidades_trajeto, lin);
+
+    aloca_trajeto(p_trajeto, cont + 1);
+    (*p_trajeto + cont)->cod = 0;
+    (*p_trajeto + cont)->distancia = valor_minimo;
+    cont++;
+
+    cidades_visitadas[0] = true;   //Cidade que observamos para ir 
+    cidades_trajeto[0] = true; //Cidades que ja passamos
+
+    copia_matriz(lin,col, m, m_aux); //Guarda matriz inicial
+
+    for(i = 0; i < profundidade; i++) //Profundidade da arvore
     {
-        exibe_matriz(lin,col,m_aux);
-        printf("\n");
-        printf("Cidades nao visitadas: \t");
-        for(j = 1; j < tamanho - i; j++)
+        for(j = 1; j < tamanho - i; j++) //Tamanho da arvore 
         {
-            if(( cidade = retorna_cidade(lin,col,m_aux)) != -1)
+            if((cidade = verifica_visita(cidades_visitadas, lin)) != -1)
             {
+                copia_matriz(lin,col, m_aux, m_aux_aux);
+                min_parcial = traca_caminho(inicio_de_partida,cidade, lin, col, m_aux_aux);
+
                 if(flag == 0)
                 {
                     resultado_parcial = m[inicio_de_partida][cidade] + valor_minimo + min_parcial;
@@ -229,16 +258,30 @@ void  branch_and_bound(int lin, int col, float m[lin][col], float valor_minimo)
                 {
                     resultado_parcial = m[inicio_de_partida][cidade] + valor_minimo + min_parcial;
                     pos_aux = cidade;
-                    flag++;
                 } 
             }
         }
 
         min_parcial = traca_caminho(pos,pos_aux, lin, col, m_aux);
+        inicio_de_partida = pos_aux;
+        cidades_trajeto[inicio_de_partida] = true;
+
+        aloca_trajeto(p_trajeto, cont + 1);
+        (*p_trajeto + cont)->cod = inicio_de_partida;
+        (*p_trajeto + cont)->distancia = resultado_parcial;
+        cont++;
+
+        copia_caminho_ja_caminhado(cidades_trajeto, cidades_visitadas, lin);
+        y++;
         flag = 0;
-        printf("\n");
-            
     }
+}
+
+void  inicializa_vetor_cidades_visitadas(bool *p, int tam)
+{
+    int i = 0;
+    for( i = 0; i < tam; i++)
+        *(p + i) = false;
 }
 
 void  copia_matriz(int lin, int col, float m[lin][col], float m_aux[lin][col])
@@ -271,13 +314,31 @@ void  zera_coluna_linha_e_encontro(int inicio_de_partida, int prox_parada,int li
     }
 }
 
-int   retorna_cidade(int lin, int col, float m[lin][col])
+int   verifica_visita(bool *p, int tam)
 {
     int i = 0;
-
-    for(i = 0; i < lin; i++)
-        if(m[i][0] != -1)
+    for( i = 0; i < tam; i++)
+    {
+        if(*(p + i) == false) //Busca cidade ainda não visita
+        {
+            *(p + i) = true; //cidade visita;
             return i;
+        } 
+    }
 
     return -1;
+}
+
+void  copia_caminho_ja_caminhado(bool *p, bool *q, int tam)
+{
+    int i = 0;
+    for(i = 0; i < tam; i++)
+        *(q + i) = *(p + i);
+}
+
+void  aloca_trajeto(trajeto **p, int tam){
+  if( (*p = (trajeto *)realloc( *p ,tam * sizeof(trajeto))) == NULL) {
+        printf("Estamos sem memoria...");
+        exit(1);
+    }
 }
