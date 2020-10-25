@@ -52,19 +52,18 @@ int main ()
     float m[n][n];
     float min = monta_matriz(p_cidade, n, n, m);
 //Ok
-    float m_teste[5][5] = {-1,10,17,0,1,12,-1,11,2,0,0,3,-1,0,2,15,3,12,-1,0,11,0,0,12,-1};
-    branch_and_bound(5,5,m_teste,25, &p_trajeto);
+    branch_and_bound(n,n,m,min, &p_trajeto);
 
     int i = 0;
 
     printf("Trajeto: ");
-    for(i = 0; i < 5; i++)
+    for(i = 0; i < n; i++)
     {
         printf("%i\t", (p_trajeto + i)->cod + 1);
     }
 
     printf("\nDistancoa: ");
-    for(i = 0; i < 5; i++)
+    for(i = 0; i < n; i++)
     {
         printf("%f\t", (p_trajeto + i)->distancia);
     }
@@ -262,8 +261,10 @@ void  branch_and_bound(int lin, int col, float m[lin][col], float valor_minimo, 
             }
         }
 
-        min_parcial = traca_caminho(pos,pos_aux, lin, col, m_aux);
+        min_parcial = traca_caminho(inicio_de_partida,pos_aux, lin, col, m_aux);
+        resultado_parcial = min_parcial + valor_minimo +  m[inicio_de_partida][pos_aux];
         inicio_de_partida = pos_aux;
+        valor_minimo = resultado_parcial;
         cidades_trajeto[inicio_de_partida] = true;
 
         aloca_trajeto(p_trajeto, cont + 1);
