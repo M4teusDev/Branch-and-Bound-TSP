@@ -4,7 +4,7 @@
 #include <string.h>
 #include <math.h>
 
-float BKS = 2579;
+float BKS = 21282;
 
 typedef struct cidade
 {
@@ -61,13 +61,15 @@ int main ()
     menores_resultados_linhas = branch_and_bound(n,n,m,min, &p_trajeto);
     float solucao = (p_trajeto + n-1)->distancia;
     
+    
     for(j = 0; j < 5; j++) {
         pos_branch_and_bound(n,n,m,min, &pos_p_trajeto, menores_resultados_linhas, &solucao);
-        if(solucao > (p_trajeto + n - 1)->distancia) solucao = (p_trajeto + n - 1)->distancia;
-	}
+        if(solucao > (p_trajeto + n - 1)->distancia) solucao = (p_trajeto + n - 1)->distancia + m[(p_trajeto + n)->cod][1];
+    }
+
 
     printf("\n\nValor obtido %f\n",solucao);
-    printf("Distancia do melhor valor conhecido %.1f%%", (solucao / BKS - 1)*100 );
+    printf("Distancia do melhor valor conhecido %.1f%%", (solucao / BKS - 1)* 100 );
 
 	return 0;
 }
@@ -338,7 +340,7 @@ float *branch_and_bound(int lin, int col, float m[lin][col], float valor_minimo,
     {
         for(j = 1; j < tamanho - i; j++) //Tamanho da arvore
         {
-            if((cidade = verifica_visita(cidades_visitadas, lin)) != -1)
+            if( (cidade = verifica_visita(cidades_visitadas, lin)) != -1)
             {
                 copia_matriz(lin,col, m_aux, m_aux_aux);
                 min_parcial = traca_caminho(inicio_de_partida,cidade, lin, col, m_aux_aux);
